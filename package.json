@@ -4,10 +4,9 @@
   "description": "",
   "main": "Backend/src/index.js",
   "scripts": {
-    "build": "npm install --prefix Frontend && npm run build --prefix Frontend",
-    "start": "npm run build && node Backend/src/index.js",
-    "server": "node Backend/src/index.js",
-    "dev": "nodemon Backend/src/index.js"
+    "dev": "nodemon Backend/src/index.js",
+    "build": "npm install && npm install --prefix Frontend && npm run build --prefix Frontend",
+    "start": "node Backend/src/index.js"
   },
   "keywords": [],
   "author": "",
