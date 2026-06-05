@@ -20,13 +20,20 @@ const sendEmail = async (options) => {
   const user = process.env.SMTP_USER || process.env.MAILTRAP_SMTP_USER;
   const pass = process.env.SMTP_PASS || process.env.MAILTRAP_SMTP_PASS;
 
+  const secure = process.env.SMTP_SECURE
+    ? process.env.SMTP_SECURE === "true"
+    : port === 465;
+
   const transporter = nodemailer.createTransport({
     host,
     port,
     // secure must be true for port 465 (Gmail), false for 587/2525 (STARTTLS).
-    secure: process.env.SMTP_SECURE
-      ? process.env.SMTP_SECURE === "true"
-      : port === 465,
+    secure,
+    // On STARTTLS ports, force the upgrade so we never send creds in the clear.
+    requireTLS: !secure,
+    // Fail fast instead of hanging if the network drops the connection.
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
     auth: { user, pass },
   });
 
@@ -38,13 +45,24 @@ const sendEmail = async (options) => {
     html: emailHtml,
   };
 
-  try {
-    await transporter.sendMail(mail);
-  } catch (error) {
-    // Don't crash the request flow if email fails (e.g. missing SMTP creds in dev).
-    console.error("Email service failed. Make sure SMTP credentials are set.");
-    console.error("Error: ", error);
+  // Retry once on transient network failures (e.g. ESOCKET/ETIMEDOUT — Gmail
+  // ports occasionally drop the socket before TLS is established).
+  let lastError;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      await transporter.sendMail(mail);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
   }
+
+  // Don't crash the request flow if email fails (e.g. missing SMTP creds in dev).
+  console.error("Email service failed. Make sure SMTP credentials are set.");
+  console.error("Error: ", lastError);
 };
 
 const emailVerificationMailgenContent = (username, verificationUrl) => {
