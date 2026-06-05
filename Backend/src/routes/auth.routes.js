@@ -19,6 +19,7 @@ import {
   userChangePasswordValidator,
   userForgotPasswordValidator,
   userResetForgottenPasswordValidator,
+  userResendEmailVerificationValidator,
 } from "../validators/index.js";
 
 const router = Router();
@@ -32,12 +33,15 @@ router
   .route("/forgot-password")
   .post(userForgotPasswordValidator(), validate, forgotPasswordRequest);
 router
-  .route("/reset-password/:resetToken")
+  .route("/reset-password")
   .post(
     userResetForgottenPasswordValidator(),
     validate,
     resetForgottenPassword
   );
+router
+  .route("/resend-email-verification")
+  .post(userResendEmailVerificationValidator(), validate, resendEmailVerification);
 
 // Secured routes
 router.route("/logout").post(verifyJWT, logout);
@@ -45,8 +49,5 @@ router.route("/current-user").get(verifyJWT, getCurrentUser);
 router
   .route("/change-password")
   .post(verifyJWT, userChangePasswordValidator(), validate, changeCurrentPassword);
-router
-  .route("/resend-email-verification")
-  .post(verifyJWT, resendEmailVerification);
 
 export default router;

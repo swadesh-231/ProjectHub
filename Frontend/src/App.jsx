@@ -45,7 +45,7 @@ const App = () => {
           }
         />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
 
         {/* App */}

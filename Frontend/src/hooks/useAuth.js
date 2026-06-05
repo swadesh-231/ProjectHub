@@ -55,12 +55,22 @@ export const useRegister = () => {
   return useMutation({
     mutationFn: (payload) => authApi.register(payload),
     onSuccess: () => {
-      toast.success("Account created. You can sign in now.");
+      toast.success(
+        "Account created! Check your email for a verification link, then sign in."
+      );
       navigate("/login", { replace: true });
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
 };
+
+export const useResendVerification = () =>
+  useMutation({
+    mutationFn: (email) => authApi.resendVerification({ email }),
+    onSuccess: () =>
+      toast.success("Verification email sent. Please check your inbox."),
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
 
 export const useLogout = () => {
   const navigate = useNavigate();
@@ -86,8 +96,8 @@ export const useForgotPassword = () =>
 
 export const useResetPassword = () =>
   useMutation({
-    mutationFn: ({ token, newPassword }) =>
-      authApi.resetPassword(token, { newPassword }),
+    mutationFn: ({ email, code, newPassword }) =>
+      authApi.resetPassword({ email, code, newPassword }),
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
 

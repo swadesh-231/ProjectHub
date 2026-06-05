@@ -13,17 +13,25 @@ const sendEmail = async (options) => {
   const emailText = mailGenerator.generatePlaintext(options.mailgenContent);
   const emailHtml = mailGenerator.generate(options.mailgenContent);
 
+  // Generic SMTP config (Gmail, Resend, etc.). Falls back to the old
+  // MAILTRAP_* vars so existing setups keep working.
+  const host = process.env.SMTP_HOST || process.env.MAILTRAP_SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT || process.env.MAILTRAP_SMTP_PORT);
+  const user = process.env.SMTP_USER || process.env.MAILTRAP_SMTP_USER;
+  const pass = process.env.SMTP_PASS || process.env.MAILTRAP_SMTP_PASS;
+
   const transporter = nodemailer.createTransport({
-    host: process.env.MAILTRAP_SMTP_HOST,
-    port: process.env.MAILTRAP_SMTP_PORT,
-    auth: {
-      user: process.env.MAILTRAP_SMTP_USER,
-      pass: process.env.MAILTRAP_SMTP_PASS,
-    },
+    host,
+    port,
+    // secure must be true for port 465 (Gmail), false for 587/2525 (STARTTLS).
+    secure: process.env.SMTP_SECURE
+      ? process.env.SMTP_SECURE === "true"
+      : port === 465,
+    auth: { user, pass },
   });
 
   const mail = {
-    from: process.env.MAIL_FROM || "mail@projectcamp.com",
+    from: process.env.MAIL_FROM || user || "mail@projectcamp.com",
     to: options.email,
     subject: options.subject,
     text: emailText,
@@ -59,22 +67,17 @@ const emailVerificationMailgenContent = (username, verificationUrl) => {
   };
 };
 
-const forgotPasswordMailgenContent = (username, passwordResetUrl) => {
+const forgotPasswordMailgenContent = (username, otp) => {
   return {
     body: {
       name: username,
-      intro: "We got a request to reset the password of your account.",
-      action: {
-        instructions:
-          "To reset your password click on the following button or link:",
-        button: {
-          color: "#22BC66",
-          text: "Reset password",
-          link: passwordResetUrl,
-        },
-      },
+      intro: [
+        "We got a request to reset the password of your account.",
+        `Your one-time password reset code is: ${otp}`,
+        "Enter this code on the reset page. It expires in 10 minutes.",
+      ],
       outro:
-        "Need help, or have questions? Just reply to this email, we'd love to help.",
+        "If you didn't request this, you can safely ignore this email — your password won't be changed.",
     },
   };
 };

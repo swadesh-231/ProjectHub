@@ -40,7 +40,28 @@ const userForgotPasswordValidator = () => [
 ];
 
 const userResetForgottenPasswordValidator = () => [
+  body("email")
+    .trim()
+    .notEmpty()
+    .withMessage("Email is required")
+    .isEmail()
+    .withMessage("Email is invalid"),
+  body("code")
+    .trim()
+    .notEmpty()
+    .withMessage("Reset code is required")
+    .isLength({ min: 6, max: 6 })
+    .withMessage("Code must be 6 digits"),
   body("newPassword").notEmpty().withMessage("New password is required"),
+];
+
+const userResendEmailVerificationValidator = () => [
+  body("email")
+    .trim()
+    .notEmpty()
+    .withMessage("Email is required")
+    .isEmail()
+    .withMessage("Email is invalid"),
 ];
 
 const createProjectValidator = () => [
@@ -109,6 +130,7 @@ export {
   userChangePasswordValidator,
   userForgotPasswordValidator,
   userResetForgottenPasswordValidator,
+  userResendEmailVerificationValidator,
   createProjectValidator,
   addMemberToProjectValidator,
   updateMemberRoleValidator,

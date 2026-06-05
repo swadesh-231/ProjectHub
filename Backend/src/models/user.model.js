@@ -108,4 +108,19 @@ userSchema.methods.generateTemporaryToken = function () {
   return { unHashedToken, hashedToken, tokenExpiry };
 };
 
+// Generates a 6-digit numeric OTP for password reset. Returns the plain OTP
+// (sent in the email) and the hashed OTP + expiry (stored on the document).
+userSchema.methods.generateForgotPasswordOTP = function () {
+  const unHashedOTP = `${crypto.randomInt(0, 1_000_000)}`.padStart(6, "0");
+
+  const hashedOTP = crypto
+    .createHash("sha256")
+    .update(unHashedOTP)
+    .digest("hex");
+
+  const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  return { unHashedOTP, hashedOTP, otpExpiry };
+};
+
 export const User = mongoose.model("User", userSchema);

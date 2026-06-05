@@ -21,6 +21,11 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z
   .object({
+    email: z.string().min(1, "Email is required").email("Enter a valid email"),
+    code: z
+      .string()
+      .min(1, "Enter the code from your email")
+      .regex(/^\d{6}$/, "Code must be 6 digits"),
     newPassword: z.string().min(6, "At least 6 characters"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })

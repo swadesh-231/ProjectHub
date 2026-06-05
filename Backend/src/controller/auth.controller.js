@@ -53,7 +53,7 @@ const registerUser = asyncHandler(async (req, res) => {
     subject: "Please verify your email",
     mailgenContent: emailVerificationMailgenContent(
       user.username,
-      `${req.protocol}://${req.get("host")}/api/v1/auth/verify-email/${unHashedToken}`
+      `${process.env.CLIENT_URL}/verify-email/${unHashedToken}`
     ),
   });
 
@@ -67,7 +67,7 @@ const registerUser = asyncHandler(async (req, res) => {
       new ApiResponse(
         201,
         createdUser,
-        "User registered successfully. Verification email has been sent."
+        "Registered successfully. Please check your email to verify your account before logging in."
       )
     );
 });
@@ -87,6 +87,13 @@ const login = asyncHandler(async (req, res) => {
   const isPasswordValid = await user.isPasswordCorrect(password);
   if (!isPasswordValid) {
     throw new ApiError(401, "Invalid credentials");
+  }
+
+  if (!user.isEmailVerified) {
+    throw new ApiError(
+      403,
+      "Please verify your email before logging in. Check your inbox for the verification link."
+    );
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
@@ -179,7 +186,11 @@ const verifyEmail = asyncHandler(async (req, res) => {
 });
 
 const resendEmailVerification = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  // Unsecured: an unverified user can't log in yet, so we look them up by the
+  // email they registered with rather than from a session.
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
   if (!user) {
     throw new ApiError(404, "User does not exist");
   }
@@ -199,7 +210,7 @@ const resendEmailVerification = asyncHandler(async (req, res) => {
     subject: "Please verify your email",
     mailgenContent: emailVerificationMailgenContent(
       user.username,
-      `${req.protocol}://${req.get("host")}/api/v1/auth/verify-email/${unHashedToken}`
+      `${process.env.CLIENT_URL}/verify-email/${unHashedToken}`
     ),
   });
 
@@ -256,42 +267,45 @@ const forgotPasswordRequest = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User does not exist");
   }
 
-  const { unHashedToken, hashedToken, tokenExpiry } =
-    user.generateTemporaryToken();
-  user.forgotPasswordToken = hashedToken;
-  user.forgotPasswordExpiry = tokenExpiry;
+  const { unHashedOTP, hashedOTP, otpExpiry } =
+    user.generateForgotPasswordOTP();
+  user.forgotPasswordToken = hashedOTP;
+  user.forgotPasswordExpiry = otpExpiry;
   await user.save({ validateBeforeSave: false });
 
   await sendEmail({
     email: user.email,
-    subject: "Password reset request",
-    mailgenContent: forgotPasswordMailgenContent(
-      user.username,
-      `${process.env.FORGOT_PASSWORD_REDIRECT_URL}/reset-password/${unHashedToken}`
-    ),
+    subject: "Your password reset code",
+    mailgenContent: forgotPasswordMailgenContent(user.username, unHashedOTP),
   });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "Password reset email sent"));
+    .json(
+      new ApiResponse(
+        200,
+        { email: user.email },
+        "Password reset code sent to your email"
+      )
+    );
 });
 
 const resetForgottenPassword = asyncHandler(async (req, res) => {
-  const { resetToken } = req.params;
-  const { newPassword } = req.body;
+  const { email, code, newPassword } = req.body;
 
-  const hashedToken = crypto
+  const hashedOTP = crypto
     .createHash("sha256")
-    .update(resetToken)
+    .update(String(code).trim())
     .digest("hex");
 
   const user = await User.findOne({
-    forgotPasswordToken: hashedToken,
+    email,
+    forgotPasswordToken: hashedOTP,
     forgotPasswordExpiry: { $gt: Date.now() },
   });
 
   if (!user) {
-    throw new ApiError(400, "Token is invalid or expired");
+    throw new ApiError(400, "Code is invalid or expired");
   }
 
   user.forgotPasswordToken = undefined;

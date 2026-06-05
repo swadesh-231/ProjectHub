@@ -7,8 +7,8 @@ export const authApi = {
   currentUser: () => apiClient.get("/auth/current-user"),
   changePassword: (payload) => apiClient.post("/auth/change-password", payload),
   verifyEmail: (token) => apiClient.get(`/auth/verify-email/${token}`),
-  resendVerification: () => apiClient.post("/auth/resend-email-verification"),
+  resendVerification: (payload) =>
+    apiClient.post("/auth/resend-email-verification", payload),
   forgotPassword: (payload) => apiClient.post("/auth/forgot-password", payload),
-  resetPassword: (token, payload) =>
-    apiClient.post(`/auth/reset-password/${token}`, payload),
+  resetPassword: (payload) => apiClient.post("/auth/reset-password", payload),
 };
