@@ -7,8 +7,12 @@ import {
   Settings,
 } from "lucide-react";
 
+// In production the SPA is served by the backend on the same origin, so a
+// relative path hits the deployed API directly (no CORS, no hardcoded URL).
+// Local dev still talks to the backend running on :8080.
 export const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? "/api/v1" : "http://localhost:8080/api/v1");
 
 export const TOKEN_KEYS = {
   ACCESS: "pc_access_token",
